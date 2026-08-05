@@ -1,0 +1,4 @@
+Telegram Bot token to access the HTTP API: 8981395706:AAE-oC75G1J4YXTxKs4Z_JBmS2i48IUTjjA
+Google Sheet ID: 1_UdkwKk9IPcrqA63ypJkdgUx4d5-leRaLl70Yi2yUyQ
+https://docs.google.com/spreadsheets/d/1_UdkwKk9IPcrqA63ypJkdgUx4d5-leRaLl70Yi2yUyQ/edit?usp=sharing
+API-key for website: AIzaSyDqkgPE14P_rvSDzZ8RuQvaiJEa3ourHCY

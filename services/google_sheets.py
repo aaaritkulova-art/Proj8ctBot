@@ -15,6 +15,8 @@ Telegram Bot API не позволяет отправить пользовате
 Это не меняет три листа из ТЗ, а дополняет их.
 """
 import json
+import os
+import tempfile
 import logging
 from typing import Optional, List, Dict, Any
 
@@ -104,13 +106,54 @@ class GoogleSheetsService:
         а если она не задана — из файла по пути GOOGLE_CREDENTIALS_FILE
         (удобно для локальной разработки).
         """
-        if GOOGLE_CREDENTIALS_JSON:
-            info = json.loads(GOOGLE_CREDENTIALS_JSON)
-            credentials = Credentials.from_service_account_info(info, scopes=SCOPES)
-        else:
-            credentials = Credentials.from_service_account_file(
-                GOOGLE_CREDENTIALS_FILE, scopes=SCOPES
-            )
+        temp_path = None
+        
+        try:
+            if GOOGLE_CREDENTIALS_JSON:
+                logger.info("📄 Загрузка credentials из переменной GOOGLE_CREDENTIALS_JSON...")
+                
+                # Парсим JSON
+                creds_dict = json.loads(GOOGLE_CREDENTIALS_JSON)
+                
+                # КРИТИЧЕСКИ ВАЖНО: Исправляем private_key
+                if 'private_key' in creds_dict:
+                    creds_dict['private_key'] = creds_dict['private_key'].replace('\\n', '\n')
+                    logger.info("✅ private_key исправлена")
+                
+                # Создаём временный файл (это 100% решает проблему с \n)
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+                    json.dump(creds_dict, f)
+                    temp_path = f.name
+                    logger.info(f"✅ Временный файл создан: {temp_path}")
+                
+                # Загружаем credentials ИЗ ФАЙЛА (не из строки!)
+                credentials = Credentials.from_service_account_file(
+                    temp_path,
+                    scopes=SCOPES
+                )
+                logger.info("✅ Credentials загружены из временного файла")
+                
+            else:
+                logger.info("📄 Загрузка credentials из файла: %s", GOOGLE_CREDENTIALS_FILE)
+                credentials = Credentials.from_service_account_file(
+                    GOOGLE_CREDENTIALS_FILE, scopes=SCOPES
+                )
+                
+        except json.JSONDecodeError as e:
+            logger.error(f"❌ Ошибка парсинга JSON: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"❌ Ошибка создания credentials: {e}")
+            raise
+        finally:
+            # Удаляем временный файл
+            if temp_path and os.path.exists(temp_path):
+                try:
+                    os.unlink(temp_path)
+                    logger.info("🧹 Временный файл удалён")
+                except Exception as e:
+                    logger.warning(f"⚠️ Не удалось удалить временный файл: {e}")
+        
         self.client = gspread.authorize(credentials)
         self.spreadsheet = self.client.open_by_key(GOOGLE_SHEET_ID)
 

@@ -14,6 +14,7 @@ Telegram Bot API не позволяет отправить пользовате
 автоматически при любом взаимодействии пользователя с ботом.
 Это не меняет три листа из ТЗ, а дополняет их.
 """
+import json
 import logging
 from typing import Optional, List, Dict, Any
 
@@ -23,6 +24,7 @@ from google.oauth2.service_account import Credentials
 from config import (
     GOOGLE_SHEET_ID,
     GOOGLE_CREDENTIALS_FILE,
+    GOOGLE_CREDENTIALS_JSON,
     SHEET_PROJECT_INFO,
     SHEET_TASKS,
     SHEET_PROTOCOLS,
@@ -95,10 +97,20 @@ class GoogleSheetsService:
         """
         Устанавливает соединение с Google Sheets API и открывает
         рабочие листы, создавая их (с заголовками) при отсутствии.
+
+        Сервисный ключ читается из переменной окружения
+        GOOGLE_CREDENTIALS_JSON (содержимое JSON-файла целиком — так
+        удобно на хостингах вроде Railway, где нет файлового доступа),
+        а если она не задана — из файла по пути GOOGLE_CREDENTIALS_FILE
+        (удобно для локальной разработки).
         """
-        credentials = Credentials.from_service_account_file(
-            GOOGLE_CREDENTIALS_FILE, scopes=SCOPES
-        )
+        if GOOGLE_CREDENTIALS_JSON:
+            info = json.loads(GOOGLE_CREDENTIALS_JSON)
+            credentials = Credentials.from_service_account_info(info, scopes=SCOPES)
+        else:
+            credentials = Credentials.from_service_account_file(
+                GOOGLE_CREDENTIALS_FILE, scopes=SCOPES
+            )
         self.client = gspread.authorize(credentials)
         self.spreadsheet = self.client.open_by_key(GOOGLE_SHEET_ID)
 
